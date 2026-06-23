@@ -1,0 +1,18 @@
+before running the code you need to do following things
+ * you need a folder where all files are present, 2 folders contains main code for node A and node B
+ * now go to make file and see the cc flag and set the path according to you own system
+ * go to terminal (of vscode (should have bash terminal and compiler msys2 for linex libs) then on to folder where you have all the files of this communication system)
+ * open 4 terminals in parallel and run one code from below in each of one terminal as given 
+
+
+
+# Terminal 1 — Node A
+qemu-system-riscv32 -M sifive_u -bios none -kernel nodeA.elf -serial tcp:127.0.0.1:4444,server -serial tcp:127.0.0.1:4445,server
+
+# Terminal 2 — Node B
+qemu-system-riscv32 -M sifive_u -bios none -kernel nodeB.elf -serial tcp:127.0.0.1:4446,server -serial tcp:127.0.0.1:4445
+
+# Terminals 3 & 4
+python display_front.py 4444
+python display_front.py 4446
+
