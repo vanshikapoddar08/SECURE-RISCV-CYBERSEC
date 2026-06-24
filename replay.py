@@ -1,7 +1,7 @@
 import socket
 import threading
 
-LISTEN_PORT = 5555
+LISTEN_PORT = 5556
 
 captured_packet = None
 
