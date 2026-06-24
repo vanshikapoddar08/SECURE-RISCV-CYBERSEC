@@ -1,20 +1,58 @@
 import socket
-import time
+import threading
 
-HOST = "127.0.0.1"
-PORT = 4444
+LISTEN_PORT = 5555
 
-sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-sock.connect((HOST, PORT))
+captured_packet = None
 
-msg = "ATTACKTEST\n"
+def forward(src, dst):
+    global captured_packet
 
-print("Sending original...")
-sock.sendall(msg.encode())
+    while True:
+        data = src.recv(1024)
 
-time.sleep(3)
+        if not data:
+            break
 
-print("Replaying...")
-sock.sendall(msg.encode())
+        print("Captured:", data.hex())
 
-sock.close()
+        captured_packet = data
+
+        dst.sendall(data)
+
+def replay(dst):
+    global captured_packet
+
+    while True:
+        cmd = input("Type replay: ")
+
+        if cmd == "replay":
+
+            if captured_packet:
+
+                print("Replaying packet...")
+
+                dst.sendall(captured_packet)
+
+server = socket.socket()
+server.bind(("127.0.0.1", LISTEN_PORT))
+server.listen(1)
+
+print("Waiting for Node A...")
+
+nodeA = server.accept()[0]
+
+print("Node A connected")
+
+nodeB = socket.socket()
+nodeB.connect(("127.0.0.1", 4445))
+
+print("Connected to Node B")
+
+threading.Thread(
+    target=forward,
+    args=(nodeA,nodeB),
+    daemon=True
+).start()
+
+replay(nodeB)
