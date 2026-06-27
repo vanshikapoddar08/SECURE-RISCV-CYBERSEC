@@ -4,8 +4,8 @@ from scapy.all import rdpcap, TCP, IP
 
 # === HARDCODED CONFIGURATION ===
 PCAP_FILE = "traffic.pcap"
-TARGET_IP = "127.0.0.1"  # <--- CHANGE THIS to Node B's actual IP address
-TARGET_PORT = 4446          # Configured socat port
+TARGET_IP = "127.0.0.1"  
+TARGET_PORT = 4446         
 PROTOCOL = "TCP"
 
 def extract_raw_payloads(pcap_path, target_port):
