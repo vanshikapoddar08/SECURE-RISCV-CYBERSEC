@@ -2,7 +2,7 @@ import socket
 import sys
 from scapy.all import rdpcap, TCP, IP
 
-# === HARDCODED CONFIGURATION ===
+
 PCAP_FILE = "simulation_traffic.pcap"
 TARGET_IP = "127.0.0.1"  
 TARGET_PORT = 4446         
