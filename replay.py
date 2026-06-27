@@ -8,7 +8,7 @@ def extract_raw_payloads(pcap_path, target_port):
     raw_payloads = []
     for packet in packets:
         if packet.haslayer(IP) and packet.haslayer(TCP):
-            # REMOVED port filtering: extracts any TCP packet that has a payload
+            
             if packet[TCP].payload:
                 raw_payloads.append(bytes(packet[TCP].payload))
                 
