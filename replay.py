@@ -4,7 +4,7 @@ from scapy.all import rdpcap, TCP, IP
 
 # === HARDCODED CONFIGURATION ===
 PCAP_FILE = "traffic.pcap"
-TARGET_IP = "192.168.1.50"  # <--- CHANGE THIS to Node B's actual IP address
+TARGET_IP = "127.0.0.1"  # <--- CHANGE THIS to Node B's actual IP address
 TARGET_PORT = 4446          # Configured socat port
 PROTOCOL = "TCP"
 
