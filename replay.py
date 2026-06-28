@@ -1,19 +1,25 @@
-from scapy.all import rdpcap, IP, TCP, Raw, send
+from scapy.all import rdpcap, Raw
+import socket
 
-# Load the file into a list-like structure
+# 1. Load the capture file
 pkts = rdpcap("traffic.pcap")
-# Extract packet index 4 (the 5th packet in the file)
+
+# 2. Grab the first packet
 target_packet = pkts[0]
-# 1. Update IP destination to local loopback
-if target_packet.haslayer(IP):
-    target_packet[IP].dst = "127.0.0.1"
-    del target_packet[IP].chksum  # Delete old checksum so Scapy recalculates it
 
-# 2. Update TCP destination port to match QEMU (4445)
-if target_packet.haslayer(TCP):
-    target_packet[TCP].dport = 4445
-    del target_packet[TCP].chksum  # Delete old checksum so Scapy recalculates it
-# Send the packet onto the network layer
-send(target_packet)
-print("Packet replayed successfully.")
+# 3. Safely pull out only the message data payload
+if target_packet.haslayer(Raw):
+    msg_bytes = target_packet[Raw].load
+    print(f"Extracted payload data: {msg_bytes}")
 
+    # 4. Open a real OS connection to QEMU so it legally accepts the data
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        s.connect(("127.0.0.1", 4446)) # Connects to Node B
+        s.sendall(msg_bytes)           # Injects the actual message bytes
+        s.close()
+        print("Message successfully pushed into Node B's serial line!")
+    except ConnectionRefusedError:
+        print("Error: QEMU is not running or not listening on port 4446.")
+else:
+    print("The first packet does not contain a raw data payload.")
