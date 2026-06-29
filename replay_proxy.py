@@ -57,10 +57,13 @@ server.listen(1)
 
 print("=================================")
 print("Replay Proxy")
-print("Listening on port", LISTEN_PORT)
-print("Waiting for Node A...")
-print("=================================")
+print("Listening on 4445...")
+server.listen(1)
 
+print("Waiting for Node A...")
+node_a, addr = server.accept()
+
+print("Accepted connection from:", addr)
 node_a, addr = server.accept()
 
 print("Node A connected:", addr)
