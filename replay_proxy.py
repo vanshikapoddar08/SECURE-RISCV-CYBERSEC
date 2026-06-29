@@ -4,117 +4,113 @@ import threading
 LISTEN_HOST = "127.0.0.1"
 LISTEN_PORT = 4445
 
-NODE_B_HOST = "127.0.0.1"
-NODE_B_PORT = 4446
+NODEB_HOST = "127.0.0.1"
+NODEB_PORT = 4446
 
-BUFFER_SIZE = 1024
+BUFFER = 1024
 
-captured_packets = []
-
-node_a = None
-node_b = None
-
-
-def forward_a_to_b():
-    while True:
-
-        data = node_a.recv(BUFFER_SIZE)
-
-        if not data:
-            print("Node A disconnected")
-            break
-
-        print("\n[A -> B]")
-        print(data)
-
-        captured_packets.append(data)
-
-        node_b.sendall(data)
-
-
-def forward_b_to_a():
-    while True:
-
-        data = node_b.recv(BUFFER_SIZE)
-
-        if not data:
-            print("Node B disconnected")
-            break
-
-        print("\n[B -> A]")
-        print(data)
-
-        node_a.sendall(data)
-
-
-server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
-server.bind((LISTEN_HOST, LISTEN_PORT))
-
-server.listen(1)
-
-print("=================================")
-print("Replay Proxy")
-print("Listening on 4445...")
-server.listen(1)
-
-print("Waiting for Node A...")
-node_a, addr = server.accept()
-
-print("Accepted connection from:", addr)
-node_a, addr = server.accept()
-
-print("Node A connected:", addr)
-
-node_b = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+captured = []
 
 print("Connecting to Node B...")
 
-node_b.connect((NODE_B_HOST, NODE_B_PORT))
+# Connect to Node B FIRST (like socat)
+while True:
+    try:
+        nodeB = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        nodeB.connect((NODEB_HOST, NODEB_PORT))
+        print("Connected to Node B!")
+        break
+    except ConnectionRefusedError:
+        pass
 
-print("Connected to Node B!")
+print("Listening for Node A...")
 
-threading.Thread(target=forward_a_to_b, daemon=True).start()
-threading.Thread(target=forward_b_to_a, daemon=True).start()
+server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+server.bind((LISTEN_HOST, LISTEN_PORT))
+server.listen(1)
+
+nodeA, addr = server.accept()
+
+print("Node A connected:", addr)
+
+
+def A_to_B():
+
+    while True:
+
+        try:
+            data = nodeA.recv(BUFFER)
+
+            if not data:
+                break
+
+            print("\n[A -> B]")
+            print(data)
+            print("HEX:", data.hex())
+
+            captured.append(data)
+
+            nodeB.sendall(data)
+
+        except Exception as e:
+            print(e)
+            break
+
+
+def B_to_A():
+
+    while True:
+
+        try:
+            data = nodeB.recv(BUFFER)
+
+            if not data:
+                break
+
+            print("\n[B -> A]")
+            print(data)
+
+            nodeA.sendall(data)
+
+        except Exception as e:
+            print(e)
+            break
+
+
+threading.Thread(target=A_to_B, daemon=True).start()
+threading.Thread(target=B_to_A, daemon=True).start()
 
 
 while True:
 
     print("\n-------------------------")
-    print("Commands")
-    print("l -> List packets")
-    print("r -> Replay last")
+    print("l : List captured packets")
+    print("r : Replay last packet")
     print("-------------------------")
 
     cmd = input("> ")
 
     if cmd == "l":
 
-        if len(captured_packets) == 0:
-
-            print("No packets.")
-
+        if len(captured) == 0:
+            print("Nothing captured.")
             continue
 
-        for i, pkt in enumerate(captured_packets):
-
+        for i, pkt in enumerate(captured):
             print(i, pkt)
 
     elif cmd == "r":
 
-        if len(captured_packets) == 0:
-
+        if len(captured) == 0:
             print("Nothing captured.")
-
             continue
 
-        pkt = captured_packets[-1]
+        pkt = captured[-1]
 
-        print("Replaying:", pkt)
+        print("\nReplaying...")
+        print(pkt)
 
-        node_b.sendall(pkt)
+        nodeB.sendall(pkt)
 
-        print("Replay complete.")
-replay_console()
+        print("Replay Done.")
