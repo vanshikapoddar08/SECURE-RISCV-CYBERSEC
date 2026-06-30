@@ -1,120 +1,100 @@
 import socket
 import threading
 
+# ----------------------------
+# Configuration
+# ----------------------------
 LISTEN_HOST = "127.0.0.1"
-LISTEN_PORT = 4445
+LISTEN_PORT = 4445          # Node A connects here
 
-NODEB_HOST = "127.0.0.1"
-NODEB_PORT = 4446
+NODE_B_HOST = "127.0.0.1"
+NODE_B_PORT = 4446          # Node B server
 
-BUFFER = 1024
+last_packet = b''
 
-captured = []
 
-# --------------------------
-# Listen for Node A
-# --------------------------
+# ----------------------------
+# Forward Node A --> Node B
+# ----------------------------
+def forward_to_b(a_sock, b_sock):
+    global last_packet
+
+    while True:
+        data = a_sock.recv(1024)
+
+        if not data:
+            break
+
+        print("\nNode A --> Node B")
+        print(data)
+
+        # Save every packet
+        last_packet = data
+
+        # Forward immediately
+        b_sock.sendall(data)
+
+
+# ----------------------------
+# Forward Node B --> Node A
+# ----------------------------
+def forward_to_a(a_sock, b_sock):
+
+    while True:
+        data = b_sock.recv(1024)
+
+        if not data:
+            break
+
+        print("\nNode B --> Node A")
+        print(data)
+
+        # Forward ACK / reply
+        a_sock.sendall(data)
+
+
+# ----------------------------
+# Main
+# ----------------------------
+print("Connecting to Node B...")
+
+node_b = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+node_b.connect((NODE_B_HOST, NODE_B_PORT))
+
+print("Connected to Node B")
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-
 server.bind((LISTEN_HOST, LISTEN_PORT))
 server.listen(1)
 
 print("Waiting for Node A...")
 
-nodeA, addr = server.accept()
+node_a, addr = server.accept()
 
-print("Node A Connected!")
+print("Node A Connected")
 
-# --------------------------
-# Connect to Node B
-# --------------------------
+# Start forwarding threads
+threading.Thread(target=forward_to_b,
+                 args=(node_a, node_b),
+                 daemon=True).start()
 
-nodeB = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+threading.Thread(target=forward_to_a,
+                 args=(node_a, node_b),
+                 daemon=True).start()
 
-print("Connecting to Node B...")
-
-nodeB.connect((NODEB_HOST, NODEB_PORT))
-
-print("Connected to Node B!")
-
-# --------------------------
-# Forward A -> B
-# --------------------------
-
-def forward_A_to_B():
-
-    while True:
-
-        data = nodeA.recv(BUFFER)
-
-        if not data:
-            break
-
-        print("\nCaptured Bytes:")
-        print(data)
-        print(data.hex())
-
-        captured.append(data)
-
-        nodeB.sendall(data)
-
-# --------------------------
-# Forward B -> A
-# --------------------------
-
-def forward_B_to_A():
-
-    while True:
-
-        data = nodeB.recv(1024)
-
-        if not data:
-            print("Node B disconnected")
-            break
-
-        print("\nFROM NODE B")
-        print(data)
-        print(data.hex())
-
-        nodeA.sendall(data)
-# --------------------------
+# ----------------------------
 # Replay Menu
-# --------------------------
-
+# ----------------------------
 while True:
 
-    print("\n")
-    print("r  -> Replay last packet")
-    print("l  -> List packets")
-    print("q  -> Quit")
+    cmd = input("\nPress r to replay : ")
 
-    cmd = input("> ")
+    if cmd == "r":
 
-    if cmd == "l":
+        if last_packet:
 
-        print("\nCaptured Packets\n")
+            print("Replaying...")
+            node_b.sendall(last_packet)
 
-        for i, pkt in enumerate(captured):
-
-            print(i, pkt.hex())
-
-    elif cmd == "r":
-
-        if len(captured) == 0:
-
-            print("Nothing captured.")
-
-            continue
-
-        pkt = captured[-1]
-
-        print("\nReplaying...")
-
-        nodeB.sendall(pkt)
-
-        print("Replay Completed.")
-
-    elif cmd == "q":
-        break
+        else:
+            print("No packet captured yet.")
