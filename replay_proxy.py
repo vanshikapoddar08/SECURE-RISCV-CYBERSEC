@@ -56,6 +56,9 @@ def forward_to_a(a_sock, b_sock):
 # ----------------------------
 # Main
 # ----------------------------
+# ----------------------------
+# Main
+# ----------------------------
 print("Connecting to Node B...")
 
 node_b = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -73,14 +76,16 @@ node_a, addr = server.accept()
 
 print("Node A Connected")
 
-# Start forwarding threads
-threading.Thread(target=forward_to_b,
-                 args=(node_a, node_b),
-                 daemon=True).start()
+# === ADD THE LINES HERE ===
+node_b.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+node_a.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+# ==========================
 
-threading.Thread(target=forward_to_a,
-                 args=(node_a, node_b),
-                 daemon=True).start()
+# Start forwarding threads
+threading.Thread(target=forward_to_b, args=(node_a, node_b), daemon=True).start()
+
+threading.Thread(target=forward_to_a, args=(node_a, node_b), daemon=True).start()
+
 
 # ----------------------------
 # Replay Menu
