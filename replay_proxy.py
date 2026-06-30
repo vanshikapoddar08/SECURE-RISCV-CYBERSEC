@@ -85,16 +85,30 @@ threading.Thread(target=forward_to_a,
 # ----------------------------
 # Replay Menu
 # ----------------------------
+# ----------------------------
+# Replay Menu (Fixed with Fresh Session Initialization)
+# ----------------------------
 while True:
-
     cmd = input("\nPress r to replay : ")
-
     if cmd == "r":
-
         if last_packet:
-
-            print("Replaying...")
-            node_b.sendall(last_packet)
-
+            print("Replaying packet over a new session...")
+            try:
+                # Create a completely separate socket connection to mimic a fresh client session
+                replay_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+                replay_sock.connect((NODE_B_HOST, NODE_B_PORT))
+                
+                # If Node B expects a handshake (SYN) first, you must handle or send it here
+                
+                # Send the captured packet
+                replay_sock.sendall(last_packet)
+                
+                # Optional: Read response to see if Node B accepts it
+                response = replay_sock.recv(1024)
+                print(f"Node B Response to Replay: {response}")
+                
+                replay_sock.close()
+            except Exception as e:
+                print(f"Replay failed: {e}")
         else:
             print("No packet captured yet.")
