@@ -68,16 +68,17 @@ def forward_B_to_A():
 
     while True:
 
-        data = nodeB.recv(BUFFER)
+        data = nodeB.recv(1024)
 
         if not data:
+            print("Node B disconnected")
             break
 
+        print("\nFROM NODE B")
+        print(data)
+        print(data.hex())
+
         nodeA.sendall(data)
-
-threading.Thread(target=forward_A_to_B, daemon=True).start()
-threading.Thread(target=forward_B_to_A, daemon=True).start()
-
 # --------------------------
 # Replay Menu
 # --------------------------
