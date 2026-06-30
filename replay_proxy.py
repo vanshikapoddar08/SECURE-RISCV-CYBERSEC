@@ -11,106 +11,109 @@ BUFFER = 1024
 
 captured = []
 
-print("Connecting to Node B...")
-
-# Connect to Node B FIRST (like socat)
-while True:
-    try:
-        nodeB = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        nodeB.connect((NODEB_HOST, NODEB_PORT))
-        print("Connected to Node B!")
-        break
-    except ConnectionRefusedError:
-        pass
-
-print("Listening for Node A...")
+# --------------------------
+# Listen for Node A
+# --------------------------
 
 server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
 server.bind((LISTEN_HOST, LISTEN_PORT))
 server.listen(1)
 
+print("Waiting for Node A...")
+
 nodeA, addr = server.accept()
 
-print("Node A connected:", addr)
+print("Node A Connected!")
 
+# --------------------------
+# Connect to Node B
+# --------------------------
 
-def A_to_B():
+nodeB = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-    while True:
+print("Connecting to Node B...")
 
-        try:
-            data = nodeA.recv(BUFFER)
+nodeB.connect((NODEB_HOST, NODEB_PORT))
 
-            if not data:
-                break
+print("Connected to Node B!")
 
-            print("\n[A -> B]")
-            print(data)
-            print("HEX:", data.hex())
+# --------------------------
+# Forward A -> B
+# --------------------------
 
-            captured.append(data)
-
-            nodeB.sendall(data)
-
-        except Exception as e:
-            print(e)
-            break
-
-
-def B_to_A():
+def forward_A_to_B():
 
     while True:
 
-        try:
-            data = nodeB.recv(BUFFER)
+        data = nodeA.recv(BUFFER)
 
-            if not data:
-                break
-
-            print("\n[B -> A]")
-            print(data)
-
-            nodeA.sendall(data)
-
-        except Exception as e:
-            print(e)
+        if not data:
             break
 
+        print("\nCaptured Bytes:")
+        print(data)
+        print(data.hex())
 
-threading.Thread(target=A_to_B, daemon=True).start()
-threading.Thread(target=B_to_A, daemon=True).start()
+        captured.append(data)
 
+        nodeB.sendall(data)
+
+# --------------------------
+# Forward B -> A
+# --------------------------
+
+def forward_B_to_A():
+
+    while True:
+
+        data = nodeB.recv(BUFFER)
+
+        if not data:
+            break
+
+        nodeA.sendall(data)
+
+threading.Thread(target=forward_A_to_B, daemon=True).start()
+threading.Thread(target=forward_B_to_A, daemon=True).start()
+
+# --------------------------
+# Replay Menu
+# --------------------------
 
 while True:
 
-    print("\n-------------------------")
-    print("l : List captured packets")
-    print("r : Replay last packet")
-    print("-------------------------")
+    print("\n")
+    print("r  -> Replay last packet")
+    print("l  -> List packets")
+    print("q  -> Quit")
 
     cmd = input("> ")
 
     if cmd == "l":
 
-        if len(captured) == 0:
-            print("Nothing captured.")
-            continue
+        print("\nCaptured Packets\n")
 
         for i, pkt in enumerate(captured):
-            print(i, pkt)
+
+            print(i, pkt.hex())
 
     elif cmd == "r":
 
         if len(captured) == 0:
+
             print("Nothing captured.")
+
             continue
 
         pkt = captured[-1]
 
         print("\nReplaying...")
-        print(pkt)
 
         nodeB.sendall(pkt)
 
-        print("Replay Done.")
+        print("Replay Completed.")
+
+    elif cmd == "q":
+        break
